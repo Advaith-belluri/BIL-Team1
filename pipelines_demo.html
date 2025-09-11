@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futuristic Genomics AI Pipeline</title>
+    <style>
+        /* Basic styles for a dark, futuristic theme */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050a14;
+            color: #e0e0e0;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* The canvas where the 3D scene will be rendered */
+        #bg {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Container for UI elements to overlay on the canvas */
+        .ui-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none; /* Allows clicks to pass through to the canvas */
+        }
+
+        /* Title styling */
+        .title {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 300;
+            color: #00d4ff;
+            text-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff;
+            letter-spacing: 2px;
+        }
+        
+        /* Style for the 3D text labels on machines */
+        .label {
+            position: absolute;
+            padding: 5px 10px;
+            background: rgba(0, 20, 40, 0.7);
+            border: 1px solid #00aaff;
+            border-radius: 5px;
+            color: #00d4ff;
+            font-size: 14px;
+            text-align: center;
+            transform: translate(-50%, -50%); /* Center the label */
+            text-shadow: 0 0 5px #00d4ff;
+            white-space: nowrap;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Info panel for displaying machine details */
+        #info-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            width: 90%;
+            max-width: 650px; /* Increased width for two columns */
+            padding: 25px;
+            background: rgba(10, 25, 47, 0.85);
+            border: 1px solid #00aaff;
+            border-radius: 12px;
+            box-shadow: 0 0 25px rgba(0, 170, 255, 0.5);
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            visibility: hidden;
+            flex-direction: column;
+            gap: 15px;
+            pointer-events: auto; /* Re-enable pointer events for the panel itself */
+            transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s;
+        }
+
+        #info-panel.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        #info-panel h2 {
+            margin: 0;
+            color: #00d4ff;
+            font-size: 1.5rem;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(0, 170, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        /* New container for the two-column layout */
+        .info-content {
+            display: flex;
+            gap: 20px;
+        }
+
+        .info-code, .info-explanation {
+            flex: 1; /* Each column takes half the space */
+        }
+        
+        .info-explanation {
+            border-left: 1px solid rgba(0, 170, 255, 0.2);
+            padding-left: 20px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        #info-panel .info-code {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid rgba(0, 170, 255, 0.2);
+            overflow-x: auto;
+        }
+
+        #info-panel pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+        }
+
+        #info-panel code {
+            color: #9efeff; /* Light cyan for code text */
+        }
+        
+        #info-panel .keyword {
+            color: #ff88aa; /* Pinkish for keywords */
+        }
+
+        #info-panel .function {
+            color: #aaffaa; /* Green for function names */
+        }
+        
+        /* Close button for the info panel */
+        #close-button {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            color: #00aaff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+
+        #close-button:hover {
+            color: #ffffff;
+            transform: rotate(90deg);
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Canvas for Three.js rendering -->
+    <canvas id="bg"></canvas>
+
+    <!-- UI Overlay Elements -->
+    <div class="ui-container">
+        <div class="title">GENOMICS AI PIPELINE FOR RARE DISEASE PREDICTION</div>
+        <div id="info-panel">
+            <button id="close-button">&times;</button>
+            <h2 id="info-title"></h2>
+            <!-- This div will now hold the code brief -->
+            <div id="info-description"></div>
+        </div>
+        <!-- Labels will be dynamically added here -->
+    </div>
+    
+    <!-- Import Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script type="module">
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        
+        const aspect = window.innerWidth / window.innerHeight;
+        const frustumSize = 42; // Increased from 35 to zoom out
+        const camera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, 1, 1000);
+        
+        camera.position.set(25, 25, 25);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.querySelector('#bg'),
+            antialias: true,
+        });
+
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        // --- LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0x4040ff, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 5);
+        scene.add(directionalLight);
+
+        // --- ENVIRONMENT ---
+        const gridHelper = new THREE.GridHelper(200, 40, 0x00aaff, 0x112244);
+        scene.add(gridHelper);
+
+        // --- PIPELINE DATA & CONFIGURATION ---
+        const pipelineStages = [
+            { name: 'Data Ingestion', description: `<div class="info-content"><div class="info-code"><pre><code><span class="keyword">function</span> <span class="function">ingestData</span>(source) {
+  <span class="keyword">let</span> rawData = <span class="function">connect</span>(source);
+  <span class="keyword">if</span> (<span class="function">validate</span>(rawData.schema)) {
+    <span class="keyword">return</span> <span class="function">loadToBuffer</span>(rawData);
+  } <span class="keyword">else</span> {
+    <span class="function">logError</span>("Invalid data format");
+  }
+}</code></pre></div><div class="info-explanation">This stage connects to a data source, retrieves the raw genomic information, and validates its structure. If the data is correctly formatted, it's loaded into a temporary processing buffer.</div></div>` },
+            { name: 'Quality Control', description: `<div class="info-content"><div class="info-code"><pre><code><span class="keyword">function</span> <span class="function">runQC</span>(dataBuffer) {
+  <span class="keyword">const</span> qualityThreshold = 20;
+  <span class="keyword">return</span> dataBuffer.<span class="function">filter</span>(sequence => {
+    <span class="keyword">return</span> <span class="function">calculateAvgQuality</span>(sequence) >= qualityThreshold;
+  });
+}</code></pre></div><div class="info-explanation">The pipeline filters the data, discarding any genetic sequences that fall below a predefined quality score. This ensures that only reliable data is used for analysis, improving accuracy.</div></div>` },
+            { name: 'Feature Engineering', description: `<div class="info-content"><div class="info-code"><pre><code><span class="keyword">function</span> <span class="function">extractFeatures</span>(cleanData) {
+  <span class="keyword">let</span> features = [];
+  cleanData.<span class="function">forEach</span>(sequence => {
+    features.<span class="function">push</span>(<span class="function">findVariants</span>(sequence));
+    features.<span class="function">push</span>(<span class="function">identifyGenes</span>(sequence));
+  });
+  <span class="keyword">return</span> features;
+}</code></pre></div><div class="info-explanation">Here, the system analyzes the clean data to identify and extract key biological markers. This includes locating genetic variants and recognizing specific genes that are relevant to the analysis.</div></div>` },
+            { name: 'AI Model', description: `<div class="info-content"><div class="info-code"><pre><code><span class="keyword">async function</span> <span class="function">predict</span>(features) {
+  <span class="keyword">const</span> model = <span class="function">loadPretrainedModel</span>();
+  <span class="keyword">let</span> prediction = <span class="keyword">await</span> model.<span class="function">run</span>(features);
+  <span class="keyword">let</span> confidence = <span class="function">calculateConfidence</span>(prediction);
+  <span class="keyword">return</span> { prediction, confidence };
+}</code></pre></div><div class="info-explanation">The extracted features are fed into a pre-trained AI model. The model processes this information to predict the likelihood of a rare disease and calculates a confidence score for its prediction.</div></div>` },
+            { name: 'Reporting', description: `<div class="info-content"><div class="info-code"><pre><code><span class="keyword">function</span> <span class="function">createReport</span>(result) {
+  <span class="keyword">let</span> report = <span class="function">new Report</span>();
+  report.<span class="function">addSummary</span>(result.prediction);
+  report.<span class="function">addConfidenceScore</span>(result.confidence);
+  report.<span class="function">visualizeData</span>();
+  <span class="keyword">return</span> report.<span class="function">export</span>("PDF");
+}</code></pre></div><div class="info-explanation">The final stage compiles the prediction and confidence score into a structured report. It includes data visualizations and can be exported, for example as a PDF, for review by clinicians or researchers.</div></div>` }
+        ];
+
+        const machineSpacing = 16;
+        const totalWidth = (pipelineStages.length - 1) * machineSpacing;
+        const startX = -totalWidth / 2;
+        
+        let openMachine = null; // Track the currently open machine
+        const machineObjects = [];
+        const particleGroups = [];
+        const labelElements = [];
+        const pipeColor = 0x00aaff;
+        const particleColor = 0x00ffff;
+        const uiContainer = document.querySelector('.ui-container');
+
+        // --- CREATE PIPELINE COMPONENTS ---
+        pipelineStages.forEach((stage, index) => {
+            const x = startX + index * machineSpacing;
+            let machine = createMachine(stage.name, stage.description);
+            machine.position.set(x, 2.5, 0);
+            scene.add(machine);
+            machineObjects.push(machine);
+
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'label';
+            labelDiv.textContent = stage.name;
+            uiContainer.appendChild(labelDiv);
+            labelElements.push({ div: labelDiv, machine: machine, id: index });
+
+            if (index < pipelineStages.length - 1) {
+                const pipe = createPipe(new THREE.Vector3(x, 2.5, 0), new THREE.Vector3(x + machineSpacing, 2.5, 0));
+                scene.add(pipe);
+                
+                const particles = createParticles(new THREE.Vector3(x, 2.5, 0), machineSpacing);
+                scene.add(particles.group);
+                particleGroups.push(particles);
+            }
+        });
+        
+        // --- HELPER FUNCTIONS FOR 3D OBJECTS ---
+        
+        function createMachine(name, description) {
+            const group = new THREE.Group();
+            const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x334466, metalness: 0.9, roughness: 0.3 });
+            const coreMaterial = new THREE.MeshStandardMaterial({ color: pipeColor, emissive: pipeColor, emissiveIntensity: 0.7 });
+
+            const core = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), coreMaterial);
+            group.add(core);
+
+            const subCubes = [];
+            const subCubeSize = 2.5;
+            const gap = 0.05;
+            const offset = (subCubeSize / 2) + gap;
+
+            for (let i = 0; i < 8; i++) {
+                const subCube = new THREE.Mesh(new THREE.BoxGeometry(subCubeSize, subCubeSize, subCubeSize), baseMaterial);
+                const x = (i & 1 ? 1 : -1) * offset;
+                const y = (i & 2 ? 1 : -1) * offset;
+                const z = (i & 4 ? 1 : -1) * offset;
+                subCube.position.set(x, y, z);
+                group.add(subCube);
+                subCubes.push(subCube);
+            }
+            
+            group.userData = { name, description, isMachine: true, core, subCubes, isOpen: false };
+            return group;
+        }
+
+        function createPipe(start, end) {
+            const path = new THREE.LineCurve3(start, end);
+            const geometry = new THREE.TubeGeometry(path, 20, 0.4, 8, false);
+            const material = new THREE.MeshBasicMaterial({ color: pipeColor, transparent: true, opacity: 0.4 });
+            return new THREE.Mesh(geometry, material);
+        }
+
+        function createParticles(start, length) {
+            const group = new THREE.Group();
+            const particles = [];
+            const particleCount = 100;
+            const geom = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const mat = new THREE.MeshBasicMaterial({ color: particleColor });
+
+            for (let i = 0; i < particleCount; i++) {
+                const p = new THREE.Mesh(geom, mat);
+                p.position.x = start.x + Math.random() * length;
+                p.position.y += (Math.random() - 0.5) * 0.5;
+                p.position.z += (Math.random() - 0.5) * 0.5;
+                group.add(p);
+                particles.push(p);
+            }
+            return { group, particles, startX: start.x, length };
+        }
+
+        // --- INTERACTIVITY ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const infoPanel = document.getElementById('info-panel');
+        const infoTitle = document.getElementById('info-title');
+        const infoDescription = document.getElementById('info-description');
+        const closeButton = document.getElementById('close-button');
+
+        function toggleMachine(machine) {
+            if (openMachine && openMachine !== machine) {
+                openMachine.userData.isOpen = false;
+            }
+
+            machine.userData.isOpen = !machine.userData.isOpen;
+            
+            if (machine.userData.isOpen) {
+                openMachine = machine;
+                infoTitle.textContent = machine.userData.name;
+                infoDescription.innerHTML = machine.userData.description;
+                infoPanel.classList.add('visible');
+            } else {
+                openMachine = null;
+                infoPanel.classList.remove('visible');
+            }
+
+            // Update label visibility
+            labelElements.forEach(label => {
+                // If the info panel is open, hide all labels to prevent overlap.
+                label.div.style.opacity = openMachine ? '0' : '1';
+            });
+        }
+
+        function onMouseClick(event) {
+            // Check if the click is on the info panel
+            if (infoPanel.contains(event.target)) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(machineObjects, true);
+
+            if (intersects.length > 0) {
+                let clickedObject = intersects[0].object;
+                while (clickedObject.parent && !clickedObject.userData.isMachine) {
+                    clickedObject = clickedObject.parent;
+                }
+                if (clickedObject.userData.isMachine) {
+                    toggleMachine(clickedObject);
+                }
+            } else {
+                 if (openMachine) {
+                    toggleMachine(openMachine);
+                 }
+            }
+        }
+        
+        // --- UI EVENT LISTENERS ---
+        closeButton.addEventListener('click', () => {
+             if (openMachine) toggleMachine(openMachine);
+        });
+        window.addEventListener('click', onMouseClick, false);
+
+        // --- RESPONSIVENESS ---
+        window.addEventListener('resize', () => {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.left = frustumSize * aspect / -2;
+            camera.right = frustumSize * aspect / 2;
+            camera.top = frustumSize / 2;
+            camera.bottom = frustumSize / -2;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            machineObjects.forEach(machine => {
+                machine.rotation.y += 0.003;
+                machine.userData.core.rotation.x += 0.01;
+                machine.userData.core.rotation.y += 0.01;
+                
+                const subCubeSize = 2.5;
+                const gap = 0.05;
+                const closedOffset = (subCubeSize / 2) + gap;
+                const openOffset = closedOffset * 2.5;
+
+                machine.userData.subCubes.forEach((subCube, i) => {
+                    const targetOffset = machine.userData.isOpen ? openOffset : closedOffset;
+                    const targetX = (i & 1 ? 1 : -1) * targetOffset;
+                    const targetY = (i & 2 ? 1 : -1) * targetOffset;
+                    const targetZ = (i & 4 ? 1 : -1) * targetOffset;
+
+                    subCube.position.x += (targetX - subCube.position.x) * 0.1;
+                    subCube.position.y += (targetY - subCube.position.y) * 0.1;
+                    subCube.position.z += (targetZ - subCube.position.z) * 0.1;
+                });
+            });
+
+            particleGroups.forEach(group => {
+                group.particles.forEach(p => {
+                    p.position.x += 0.08;
+                    if (p.position.x > group.startX + group.length) {
+                        p.position.x = group.startX;
+                    }
+                });
+            });
+
+            labelElements.forEach(item => {
+                const pos = new THREE.Vector3();
+                item.machine.getWorldPosition(pos);
+                pos.project(camera);
+                const x = (pos.x * .5 + .5) * renderer.domElement.clientWidth;
+                const y = (pos.y * -.5 + .5) * renderer.domElement.clientHeight;
+                item.div.style.transform = `translate(-50%, -50%) translate(${x}px,${y - 60}px)`;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
+
